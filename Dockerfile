@@ -115,7 +115,7 @@ RUN apt-get -qq update \
 RUN pip install numpy nibabel pyvista scikit-image scikit-learn scipy matplotlib
 
 RUN cd /opt \
-    && git clone https://github.com/fionaEyoung/tractfinder.git \
+    && git clone https://github.com/azhylka/tractfinder.git \
     && cd tractfinder \
     && git checkout dev \
     && pip install -e . \
