@@ -100,7 +100,7 @@ def surf_from_vol(vol, sigma=1, target_reduction=0.8, target_nfaces=None):
 
     # Determine corresponding reduction if target faces given
     if target_nfaces:
-        target_reduction = (mesh.n_faces - target_nfaces) / mesh.n_faces
+        target_reduction = (mesh.n_faces_strict - target_nfaces) / mesh.n_faces_strict
 
     # Reduce number of triangles in mesh by desired amount
     decimated = mesh.decimate(target_reduction)

@@ -7,3 +7,5 @@
 build
 test*
 pytest*
+.vscode/
+tractfinder-tmp-*/

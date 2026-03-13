@@ -175,16 +175,16 @@ def execute():
   if app.ARGS.deformation_field: app.check_output_path(app.ARGS.deformation_field)
 
   ## Set up filenames and command strings
-  bet_cmd = fsl.exe_name('bet')
-  flirt_cmd = fsl.exe_name('flirt')
-  fsl_suffix = fsl.suffix()
+  # bet_cmd = fsl.exe_name('bet')
+  # flirt_cmd = fsl.exe_name('flirt')
+  # fsl_suffix = fsl.suffix()
 
   mask_image_reg = 'brain_mask_reg.mif'
   mask_image_def = 'brain_mask_def.mif'
   tumour_mask = 'tumour_mask.mif'
   def_field_image = 'deformation_field.mif'
   struct_image = 'struct.nii.gz'
-  bet_image = 'bet' + fsl_suffix
+  # bet_image = 'bet' + fsl_suffix
 
   app.make_scratch_dir()
   app.goto_scratch_dir()
@@ -198,40 +198,40 @@ def execute():
     run.command(f'mrconvert -strides {strides} '
               + f'{path.from_user(app.ARGS.struct[1])} {struct_image}', show=False)
 
-  ## Brain mask: will be needed for either registration or deformation modelling.
-  # Do we need to make one?
-  if make_brain_mask:
-    if app.ARGS.premasked:
-      app.warn('Relying on a pre-masked structural image to produce a brain mask for tumour deformation is risky')
-      run.command(f'mrthreshold {path.from_user(app.ARGS.struct[1])} -abs 0 -comparison gt - | '
-                + f'mrgrid - regrid {mask_image_def} -strides {strides} -vox 1 -interp nearest -datatype bit', show=False)
-      app.debug(f'{mask_image_def} created from struct image with strides {strides}')
-    else:
-      # BET madness ensues
-      app.console('No brain mask provided, attempting to generate robust mask')
-      ## Try can create a decent brain mask
-      # Start with the FOD amplitude image, fill holes
-      run.command('mrconvert -coord 3 0 ' + path.from_user(app.ARGS.input)
-                   + ' - |  mrthreshold - -abs 0 -comparison gt fod_mask.nii.gz', show=False)
-      run.command('fslmaths fod_mask.nii.gz -fillh fod_mask.nii.gz', show=False)
-      # Smooth edges and regrid to structural space
-      run.command('mrfilter fod_mask.nii.gz smooth -extent 5 - | '
-               +  'mrthreshold - -abs 0.5 - | '
-               + f'mrgrid - regrid fod_mask_smooth_regrid.mif '
-               + f'-template {struct_image} -interp nearest -strides {strides}', show=False)
-      # Dilate and use to roughly crop structural image. This is so that bet
-      # has a better change of a clean segmentation without a bunch of neck etc.
-      run.command('maskfilter fod_mask_smooth_regrid.mif dilate -npass 5 - | '
-               + f'mrcalc - {struct_image} -mult struct_rough_masked.nii.gz', show=False)
-      # Brain masking using bet
-      run.command(f'{bet_cmd} struct_rough_masked.nii.gz {bet_image} -r 100 -m ', show=False)
-      bet_image = fsl.find_image(bet_image)
-      # If we also need this brain mask for tumour deformation down the line,
-      # convert it now to the correct grid and crop image to reduce file size
-      if app.ARGS.tumour:
-        tmpfile = path.name_temporary('.mif')
-        run.command(f'mrgrid bet_mask{fsl_suffix} regrid {tmpfile} -vox 1 -interp nearest -datatype bit', show=False)
-        run.command(f'mrgrid {tmpfile} crop -mask {tmpfile} {mask_image_def} -datatype bit', show=False)
+  # ## Brain mask: will be needed for either registration or deformation modelling.
+  # # Do we need to make one?
+  # if make_brain_mask:
+  #   if app.ARGS.premasked:
+  #     app.warn('Relying on a pre-masked structural image to produce a brain mask for tumour deformation is risky')
+  #     run.command(f'mrthreshold {path.from_user(app.ARGS.struct[1])} -abs 0 -comparison gt - | '
+  #               + f'mrgrid - regrid {mask_image_def} -strides {strides} -vox 1 -interp nearest -datatype bit', show=False)
+  #     app.debug(f'{mask_image_def} created from struct image with strides {strides}')
+  #   else:
+  #     # BET madness ensues
+  #     app.console('No brain mask provided, attempting to generate robust mask')
+  #     ## Try can create a decent brain mask
+  #     # Start with the FOD amplitude image, fill holes
+  #     run.command('mrconvert -coord 3 0 ' + path.from_user(app.ARGS.input)
+  #                  + ' - |  mrthreshold - -abs 0 -comparison gt fod_mask.nii.gz', show=False)
+  #     run.command('fslmaths fod_mask.nii.gz -fillh fod_mask.nii.gz', show=False)
+  #     # Smooth edges and regrid to structural space
+  #     run.command('mrfilter fod_mask.nii.gz smooth -extent 5 - | '
+  #              +  'mrthreshold - -abs 0.5 - | '
+  #              + f'mrgrid - regrid fod_mask_smooth_regrid.mif '
+  #              + f'-template {struct_image} -interp nearest -strides {strides}', show=False)
+  #     # Dilate and use to roughly crop structural image. This is so that bet
+  #     # has a better change of a clean segmentation without a bunch of neck etc.
+  #     run.command('maskfilter fod_mask_smooth_regrid.mif dilate -npass 5 - | '
+  #              + f'mrcalc - {struct_image} -mult struct_rough_masked.nii.gz', show=False)
+  #     # Brain masking using bet
+  #     run.command(f'{bet_cmd} struct_rough_masked.nii.gz {bet_image} -r 100 -m ', show=False)
+  #     bet_image = fsl.find_image(bet_image)
+  #     # If we also need this brain mask for tumour deformation down the line,
+  #     # convert it now to the correct grid and crop image to reduce file size
+  #     if app.ARGS.tumour:
+  #       tmpfile = path.name_temporary('.mif')
+  #       run.command(f'mrgrid bet_mask{fsl_suffix} regrid {tmpfile} -vox 1 -interp nearest -datatype bit', show=False)
+  #       run.command(f'mrgrid {tmpfile} crop -mask {tmpfile} {mask_image_def} -datatype bit', show=False)
 
   ## Tumour deformation modelling
   if app.ARGS.tumour:
